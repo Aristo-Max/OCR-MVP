@@ -1,0 +1,50 @@
+# Node modules (both client and server)
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Build and dist files
+client/build/
+server/dist/
+
+# Uploads directory (if used)
+server/uploads/*
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# dotenv environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# VSCode config
+.vscode/
+
+# coverage reports (if using testing tools)
+coverage/
+client/coverage/
+server/coverage/
+
+# Parcel / Vite / React cache (if used)
+.cache/
+.client/
+.server/
+
+# Optional: Ignore IDE folders
+.idea/
+*.iml
+
+# Optional: macOS specific
+.AppleDouble
+.LSOverride

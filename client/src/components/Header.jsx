@@ -20,10 +20,11 @@ const Header = () => {
                     justifyContent: "space-between",
                     position: "relative",
                     paddingX: isMobile ? 1 : 3,
+                    minHeight: isMobile ? 48 : 64,
                 }}
             >
                 {/* Logo on the Left */}
-                <Box sx={{ display: "flex", alignItems: "center" }}>
+                <Box sx={{ display: "flex", alignItems: "center", minWidth: 60 }}>
                     <img
                         src="/AristoMax.png"
                         alt="Logo"
@@ -39,14 +40,22 @@ const Header = () => {
                     variant={isMobile ? "h6" : isTablet ? "h5" : "h4"}
                     sx={{
                         fontFamily: "'Poppins', sans-serif",
-                        fontWeight: "750",
+                        fontWeight: 750,
                         textAlign: "center",
                         color: "#0D9ECA",
-                        flexGrow: 1,
+                        position: "absolute",
+                        left: 0,
+                        right: 0,
+                        margin: "auto",
+                        width: "fit-content",
+                        pointerEvents: "none",
                     }}
                 >
                     OCR
                 </Typography>
+
+                {/* Placeholder for right side to balance the logo */}
+                <Box sx={{ minWidth: 60 }} />
             </Toolbar>
         </AppBar>
     );
