@@ -53,7 +53,6 @@ const Header = () => {
                 >
                     OCR
                 </Typography>
-
                 {/* Placeholder for right side to balance the logo */}
                 <Box sx={{ minWidth: 60 }} />
             </Toolbar>

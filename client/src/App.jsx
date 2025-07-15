@@ -9,20 +9,13 @@ import Notification from "./components/Notification";
 import OCRResultViewer from "./components/OCRResultViewer";
 
 function App() {
-  const [files, setFiles] = useState(() => {
-    const savedFiles = localStorage.getItem("files");
-    return savedFiles ? JSON.parse(savedFiles) : [];
-  });
+  const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [Data, setData] = useState(null);
   const [fileRequired, setFileRequired] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState({ message: "", type: "" });
-
-  useEffect(() => {
-    localStorage.setItem("files", JSON.stringify(files));
-  }, [files]);
 
   const showNotification = (message, type) => {
     setNotification({ message, type });
@@ -37,29 +30,7 @@ function App() {
     setFiles((prevFiles) => prevFiles.filter((file) => file !== fileToRemove));
   };
 
-  const callOcrApi = async (file) => {
-    const formData = new FormData();
-    formData.append("image", file);
-    try {
-      const response = await axios.post("http://localhost:3001/ocr", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      if (response.data.message) {
-        showNotification("OCR completed successfully!", "success");
-        return response.data.message;
-      } else {
-        showNotification("OCR failed: No text returned", "error");
-        return "";
-      }
-    } catch (err) {
-      console.error("OCR API Error:", err);
-      showNotification("OCR API error!", "error");
-      return "";
-    }
-  };
-
-  const uploadImages = async () => {
+  const upload = async () => {
     if (files.length === 0) {
       setFileRequired(true);
       showNotification("Please select at least one file to upload.", "error");
@@ -67,28 +38,24 @@ function App() {
     }
 
     setIsLoading(true);
+    const formData = new FormData();
+    files.forEach((file) => formData.append("files", file));
+
     try {
-      const ocrResults = [];
-      for (const file of files) {
-        if (!file || !file.type || !file.type.startsWith("image/")) {
-          console.warn(`Skipping non-image file: ${file?.name || "Unknown file"}`);
-          continue;
-        }
-        const ocrText = await callOcrApi(file);
-        ocrResults.push({ fileName: file.name, text: ocrText });
-      }
+      const response = await axios.post("http://localhost:3001/ocr-batch", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
-      if (ocrResults.length === 0) {
-        showNotification("No valid image files were processed.", "error");
-        return;
+      if (response.data && Array.isArray(response.data.results)) {
+        setData(response.data.results);
+        setIsLoaded(true);
+        showNotification("OCR processing complete!", "success");
+      } else {
+        showNotification("Unexpected response from server.", "error");
       }
-
-      setData(ocrResults);
-      setIsLoaded(true);
-      showNotification("OCR processing complete!", "success");
     } catch (error) {
-      console.error("OCR upload error:", error);
-      showNotification("Something went wrong during OCR!", "error");
+      console.error("OCR batch error:", error);
+      showNotification("OCR API error!", "error");
     } finally {
       setIsLoading(false);
     }
@@ -153,7 +120,7 @@ function App() {
           {!isLoaded ? (
             <form onSubmit={(e) => {
               e.preventDefault();
-              uploadImages();
+              upload();
             }}>
               <h1 style={{ textAlign: "center", color: "#333" }}>Select Images or PDF</h1>
               <DropzoneUploader onDrop={onDrop} fileRequired={fileRequired} />
