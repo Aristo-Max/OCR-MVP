@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const dotenv = require('dotenv');
 const pdfPoppler = require('pdf-poppler');
-const { runGeminiVisionOCR } = require('./geminiHelper');
+const { runGemini, runGeminiVisionOCR } = require('./geminiHelper');
 
 dotenv.config();
 
@@ -75,7 +75,7 @@ app.post('/ocr-batch', upload.array('files'), async (req, res) => {
         // OCR all images
         for (const img of allImages) {
             try {
-                const { text } = await runGeminiVisionOCR(img.path, 'image/jpeg');
+                const { text } = await runGemini({ modelName: "gemini-2.0-flash-exp", imagePath: img.path, mimeType: 'image/jpeg', prompt: 'Extract only the handwritten text from the image.Do not include any introductory phrases.' });
                 result.push({
                     fileName: img.sourceName,
                     text,
@@ -96,6 +96,34 @@ app.post('/ocr-batch', upload.array('files'), async (req, res) => {
     } catch (err) {
         console.error('OCR Batch Error:', err);
         res.status(500).json({ error: 'OCR batch processing failed.' });
+    }
+});
+
+// Semantic Search API using Gemini
+app.post('/semantic-search', async (req, res) => {
+    try {
+        const { query, text } = req.body;
+        if (!query || !text) {
+            return res.status(400).json({ error: "Query and text are required." });
+        }
+        const prompt = `
+Given the following text, find and return the most relevant substring (exact phrase) that matches the semantic meaning of the query. 
+If nothing matches, return null.
+Query: "${query}"
+Text: """${text}"""
+Return only the matching substring or null.
+`;
+
+        // Use the dynamic Gemini helper for text prompt
+        const { text: geminiResult } = await runGemini({ modelName: "gemini-2.0-flash-exp", prompt });
+
+        let substring = geminiResult && geminiResult.trim();
+        if (substring === "null" || !substring) substring = null;
+
+        res.json({ substring });
+    } catch (err) {
+        console.error("Semantic Search Error:", err);
+        res.status(500).json({ error: "Semantic search failed." });
     }
 });
 

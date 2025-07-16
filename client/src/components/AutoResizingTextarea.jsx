@@ -26,6 +26,7 @@ const AutoResizingTextarea = ({ value }) => {
                 border: "1px solid #ddd",
                 borderRadius: "5px",
                 fontSize: "14px",
+                backgroundColor: "#f9f9f9",
                 lineHeight: "1.5",
                 resize: "none",
                 overflowY: "hidden", // initially hidden, will be auto in JS
