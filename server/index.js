@@ -5,7 +5,6 @@ const path = require('path');
 const fs = require('fs');
 const dotenv = require('dotenv');
 const { runGemini } = require('./geminiHelper');
-const { fromPath } = require("pdf2pic");
 const Poppler = require('pdf-poppler');
 
 dotenv.config();
