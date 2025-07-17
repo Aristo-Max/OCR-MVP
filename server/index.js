@@ -4,8 +4,8 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const dotenv = require('dotenv');
-const pdfPoppler = require('pdf-poppler');
-const { runGemini, runGeminiVisionOCR } = require('./geminiHelper');
+const { runGemini } = require('./geminiHelper');
+const { fromPath } = require("pdf2pic");
 
 dotenv.config();
 
@@ -32,32 +32,33 @@ app.post('/ocr-batch', upload.array('files'), async (req, res) => {
             const filePath = path.join(tempDir, file.filename);
 
             if (mimeType === 'application/pdf') {
-                // Convert PDF to images
+                // Convert PDF to images using pdf2pic
                 const outputDir = path.join(tempDir, `${file.filename}_pages`);
                 fs.mkdirSync(outputDir, { recursive: true });
 
-                const options = {
-                    format: 'jpeg',
-                    out_dir: outputDir,
-                    out_prefix: 'page',
-                    page: null,
-                    dpi: 150,
-                };
+                // Get number of pages in PDF
+                const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
+                const data = new Uint8Array(fs.readFileSync(filePath));
+                const pdf = await pdfjsLib.getDocument({ data }).promise;
+                const numPages = pdf.numPages;
 
-                await pdfPoppler.convert(filePath, options);
+                const converter = fromPath(filePath, {
+                    density: 150,
+                    saveFilename: "page",
+                    savePath: outputDir,
+                    format: "jpeg",
+                    width: 1200,
+                    height: 1600,
+                });
 
-                // Sort images by page number
-                const images = fs.readdirSync(outputDir)
-                    .filter(name => name.endsWith('.jpg'))
-                    .sort((a, b) => {
-                        // Extract page numbers from filenames like page-1.jpg
-                        const getPageNum = n => parseInt(n.match(/page-(\d+)\.jpg/)?.[1] || "0", 10);
-                        return getPageNum(a) - getPageNum(b);
-                    })
-                    .map((name, idx) => ({
-                        path: path.join(outputDir, name),
-                        sourceName: `${file.originalname} - page ${idx + 1}`
-                    }));
+                const images = [];
+                for (let page = 1; page <= numPages; page++) {
+                    const result = await converter(page);
+                    images.push({
+                        path: result.path,
+                        sourceName: `${file.originalname} - page ${page}`
+                    });
+                }
 
                 allImages.push(...images);
 
