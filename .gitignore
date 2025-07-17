@@ -10,6 +10,9 @@ server/dist/
 # Uploads directory (if used)
 server/uploads/*
 
+OCR.txt
+
+
 # Logs
 *.log
 npm-debug.log*
