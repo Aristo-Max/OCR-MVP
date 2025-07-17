@@ -41,7 +41,7 @@ const OCRResultPopup = ({ open, onClose, fileName, text }) => {
             return;
         }
         try {
-            const res = await axios.post("http://localhost:3001/semantic-search", {
+            const res = await axios.post("http://13.204.91.67:3001/semantic-search", {
                 query: search,
                 text: text
             });
