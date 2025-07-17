@@ -6,6 +6,7 @@ const fs = require('fs');
 const dotenv = require('dotenv');
 const { runGemini } = require('./geminiHelper');
 const { fromPath } = require("pdf2pic");
+const Poppler = require('pdf-poppler');
 
 dotenv.config();
 
@@ -35,25 +36,25 @@ app.post('/ocr-batch', upload.array('files'), async (req, res) => {
                 const outputDir = path.join(tempDir, `${file.filename}_pages`);
                 fs.mkdirSync(outputDir, { recursive: true });
 
-                const options = {
-                    density: 200,
-                    saveFilename: "page",
-                    savePath: outputDir,
-                    format: "png",
-                    width: 1200,
-                    height: 1600
+                const opts = {
+                    format: 'png',
+                    out_dir: outputDir,
+                    out_prefix: 'page',
+                    page: null // all pages
                 };
 
-                // Convert all pages at once
-                const storeAsImage = fromPath(filePath, options);
-                const pages = await storeAsImage.bulk(-1, true); // -1 means all pages
+                // Convert PDF to images
+                await Poppler.convert(filePath, opts);
 
-                pages.forEach((page, idx) => {
-                    allImages.push({
-                        path: page.path,
+                // Collect all generated images
+                const imageFiles = fs.readdirSync(outputDir)
+                    .filter(f => f.endsWith('.png'))
+                    .map((f, idx) => ({
+                        path: path.join(outputDir, f),
                         sourceName: `${file.originalname} - page ${idx + 1}`
-                    });
-                });
+                    }));
+
+                allImages.push(...imageFiles);
 
                 fs.unlinkSync(filePath);
             }
