@@ -9,6 +9,9 @@ server/dist/
 
 # Uploads directory (if used)
 server/uploads/*
+# Package lock files
+client/package-lock.json
+server/package-lock.json
 
 OCR.txt
 

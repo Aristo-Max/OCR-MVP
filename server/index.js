@@ -5,21 +5,19 @@ const path = require('path');
 const fs = require('fs');
 const dotenv = require('dotenv');
 const { runGemini } = require('./geminiHelper');
-const Poppler = require('pdf-poppler');
+const { Poppler } = require('node-poppler');
 
 dotenv.config();
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 app.use(express.json());
-
-// Enable CORS for all routes
-const cors = require('cors');
-app.use(cors());
+app.use(require('cors')());
 
 const upload = multer({ dest: 'uploads/' });
+const poppler = new Poppler(); // Optionally pass binary path: new Poppler('/usr/bin')
 
-// Use helper function
+// OCR Batch Endpoint
 app.post('/ocr-batch', upload.array('files'), async (req, res) => {
     const tempDir = path.join(__dirname, 'uploads');
     const result = [];
@@ -28,24 +26,18 @@ app.post('/ocr-batch', upload.array('files'), async (req, res) => {
         const allImages = [];
 
         for (const file of req.files) {
-            const mimeType = file.mimetype;
             const filePath = path.join(tempDir, file.filename);
 
-            if (mimeType === 'application/pdf') {
+            if (file.mimetype === 'application/pdf') {
                 const outputDir = path.join(tempDir, `${file.filename}_pages`);
                 fs.mkdirSync(outputDir, { recursive: true });
 
-                const opts = {
-                    format: 'png',
-                    out_dir: outputDir,
-                    out_prefix: 'page',
-                    page: null // all pages
-                };
+                await poppler.pdfToCairo(
+                    filePath,
+                    path.join(outputDir, 'page.png'),
+                    { pngFile: true }
+                );
 
-                // Convert PDF to images
-                await Poppler.convert(filePath, opts);
-
-                // Collect all generated images
                 const imageFiles = fs.readdirSync(outputDir)
                     .filter(f => f.endsWith('.png'))
                     .map((f, idx) => ({
@@ -54,13 +46,11 @@ app.post('/ocr-batch', upload.array('files'), async (req, res) => {
                     }));
 
                 allImages.push(...imageFiles);
-
                 fs.unlinkSync(filePath);
-            }
-            else if (mimeType.startsWith('image/')) {
+
+            } else if (file.mimetype.startsWith('image/')) {
                 allImages.push({ path: filePath, sourceName: file.originalname });
-            }
-            else {
+            } else {
                 console.warn(`Unsupported file type: ${file.originalname}`);
             }
         }
@@ -83,19 +73,21 @@ app.post('/ocr-batch', upload.array('files'), async (req, res) => {
         }
 
         res.json({ results: result });
+
     } catch (err) {
         console.error('OCR Batch Error:', err);
         res.status(500).json({ error: 'OCR batch processing failed.' });
     }
 });
 
-// Semantic Search API using Gemini
+// Semantic Search Endpoint
 app.post('/semantic-search', async (req, res) => {
     try {
         const { query, text } = req.body;
         if (!query || !text) {
             return res.status(400).json({ error: "Query and text are required." });
         }
+
         const prompt = `
 Given the following text, find and return the most relevant substring (exact phrase) that matches the semantic meaning of the query. 
 If nothing matches, return null.
@@ -104,23 +96,24 @@ Text: """${text}"""
 Return only the matching substring or null.
 `;
 
-        // Use the dynamic Gemini helper for text prompt
-        const { text: geminiResult } = await runGemini({ modelName: "gemini-2.0-flash-exp", prompt });
+        const { text: geminiResult } = await runGemini({
+            modelName: "gemini-2.0-flash-exp",
+            prompt
+        });
 
         let substring = geminiResult && geminiResult.trim();
         if (substring === "null" || !substring) substring = null;
 
         res.json({ substring });
+
     } catch (err) {
         console.error("Semantic Search Error:", err);
         res.status(500).json({ error: "Semantic search failed." });
     }
 });
 
-app.get('/', (req, res) => {
-    res.send('Hello from AristoMax OCR server!');
-});
+app.get('/', (req, res) => res.send('Hello from AristoMax OCR server!'));
 
 app.listen(PORT, () => {
-    console.log(`Server is running at http://13.204.91.67:${PORT}`);
+    console.log(`Server is running at http://localhost:${PORT}`);
 });
