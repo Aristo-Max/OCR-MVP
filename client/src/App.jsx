@@ -42,7 +42,7 @@ function App() {
     files.forEach((file) => formData.append("files", file));
 
     try {
-      const response = await axios.post("http://13.204.91.67:3001/ocr-batch", formData, {
+      const response = await axios.post("http://localhost:3001/ocr-batch", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 

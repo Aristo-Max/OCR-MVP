@@ -32,68 +32,57 @@ app.post('/ocr-batch', upload.array('files'), async (req, res) => {
             const filePath = path.join(tempDir, file.filename);
 
             if (mimeType === 'application/pdf') {
-                // Convert PDF to images using pdf2pic
                 const outputDir = path.join(tempDir, `${file.filename}_pages`);
                 fs.mkdirSync(outputDir, { recursive: true });
 
-                // Get number of pages in PDF
-                const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
-                const data = new Uint8Array(fs.readFileSync(filePath));
-                const pdf = await pdfjsLib.getDocument({ data }).promise;
-                const numPages = pdf.numPages;
-
-                const converter = fromPath(filePath, {
-                    density: 150,
+                const options = {
+                    density: 200,
                     saveFilename: "page",
                     savePath: outputDir,
-                    format: "jpeg",
+                    format: "png",
                     width: 1200,
-                    height: 1600,
-                });
+                    height: 1600
+                };
 
-                const images = [];
-                for (let page = 1; page <= numPages; page++) {
-                    const result = await converter(page);
-                    images.push({
-                        path: result.path,
-                        sourceName: `${file.originalname} - page ${page}`
+                // Convert all pages at once
+                const storeAsImage = fromPath(filePath, options);
+                const pages = await storeAsImage.bulk(-1, true); // -1 means all pages
+
+                pages.forEach((page, idx) => {
+                    allImages.push({
+                        path: page.path,
+                        sourceName: `${file.originalname} - page ${idx + 1}`
                     });
-                }
-
-                allImages.push(...images);
-
-                fs.unlinkSync(filePath); // Delete original PDF
-            } else if (mimeType.startsWith('image/')) {
-                allImages.push({
-                    path: filePath,
-                    sourceName: file.originalname
                 });
-            } else {
+
+                fs.unlinkSync(filePath);
+            }
+            else if (mimeType.startsWith('image/')) {
+                allImages.push({ path: filePath, sourceName: file.originalname });
+            }
+            else {
                 console.warn(`Unsupported file type: ${file.originalname}`);
             }
         }
 
-        // OCR all images
         for (const img of allImages) {
             try {
-                const { text } = await runGemini({ modelName: "gemini-2.0-flash-exp", imagePath: img.path, mimeType: 'image/jpeg', prompt: 'Extract only the handwritten text from the image.Do not include any introductory phrases.' });
-                result.push({
-                    fileName: img.sourceName,
-                    text,
+                const { text } = await runGemini({
+                    modelName: "gemini-2.0-flash-exp",
+                    imagePath: img.path,
+                    mimeType: 'image/png',
+                    prompt: 'Extract only the handwritten text from the image. Do not include any introductory phrases.'
                 });
-                fs.unlinkSync(img.path); // cleanup
+                result.push({ fileName: img.sourceName, text });
             } catch (err) {
                 console.error(`Failed OCR on ${img.path}:`, err.message);
-                result.push({
-                    fileName: img.sourceName,
-                    text: '',
-                    error: err.message
-                });
+                result.push({ fileName: img.sourceName, text: '', error: err.message });
+            } finally {
+                fs.unlinkSync(img.path);
             }
         }
 
         res.json({ results: result });
-
     } catch (err) {
         console.error('OCR Batch Error:', err);
         res.status(500).json({ error: 'OCR batch processing failed.' });

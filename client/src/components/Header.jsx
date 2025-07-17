@@ -51,7 +51,7 @@ const Header = () => {
                         pointerEvents: "none",
                     }}
                 >
-                    OCR
+                    SmartRead
                 </Typography>
                 {/* Placeholder for right side to balance the logo */}
                 <Box sx={{ minWidth: 60 }} />
