@@ -61,7 +61,7 @@ app.post('/ocr-batch', upload.array('files'), async (req, res) => {
                     modelName: "gemini-2.0-flash-exp",
                     imagePath: img.path,
                     mimeType: 'image/png',
-                    prompt: 'Extract only the handwritten text from the image. Do not include any introductory phrases.'
+                    prompt: 'Extract both normal (printed) text and handwritten text from the image, if available. Do not include any introductory or explanatory phrases in the output.'
                 });
                 result.push({ fileName: img.sourceName, text });
             } catch (err) {
