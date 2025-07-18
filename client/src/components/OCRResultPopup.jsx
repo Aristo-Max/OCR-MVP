@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { FileSearch, X } from "lucide-react";
+import { ClipLoader } from "react-spinners"; // Add this import
 
-const highlightSubstring = (text, substring) => {
+const highlightSubstring = (text, substring, highlightRef) => {
     if (!substring || !text) return text;
     const regex = new RegExp(substring, "gi");
     const parts = text.split(regex);
@@ -16,6 +17,7 @@ const highlightSubstring = (text, substring) => {
                 <span
                     key={i + "-highlight"}
                     style={{ background: "#ffe066", color: "#b30000", fontWeight: "bold" }}
+                    ref={i === 0 ? highlightRef : null} // attach ref to first match
                 >
                     {matches[i]}
                 </span>
@@ -29,6 +31,15 @@ const OCRResultPopup = ({ open, onClose, fileName, text }) => {
     const [search, setSearch] = useState("");
     const [result, setResult] = useState(null);
     const [error, setError] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+
+    const highlightRef = useRef(null);
+
+    useEffect(() => {
+        if (result && highlightRef.current) {
+            highlightRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+    }, [result]);
 
     if (!open) return null;
 
@@ -40,6 +51,7 @@ const OCRResultPopup = ({ open, onClose, fileName, text }) => {
             setError("Please enter a search query.");
             return;
         }
+        setIsLoading(true);
         try {
             const res = await axios.post("http://13.204.91.67:3001/semantic-search", {
                 query: search,
@@ -55,6 +67,7 @@ const OCRResultPopup = ({ open, onClose, fileName, text }) => {
             setResult(null);
             setError("Nothing matched from this text.");
         }
+        setIsLoading(false);
     };
 
     return (
@@ -119,6 +132,7 @@ const OCRResultPopup = ({ open, onClose, fileName, text }) => {
                     />
                     <button
                         type="submit"
+                        disabled={isLoading}
                         style={{
                             background: "#0D9ECA",
                             color: "#fff",
@@ -129,15 +143,15 @@ const OCRResultPopup = ({ open, onClose, fileName, text }) => {
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            cursor: "pointer",
+                            cursor: isLoading ? "not-allowed" : "pointer",
                             fontSize: 18
                         }}
                         aria-label="Search"
                     >
-                        <FileSearch
-                            size={18}
-                            color="#FFFFFF"
-                            style={{ cursor: "pointer" }} />
+                        {isLoading
+                            ? <ClipLoader size={18} color="#FFFFFF" loading={isLoading} />
+                            : <FileSearch size={18} color="#FFFFFF" style={{ cursor: "pointer" }} />
+                        }
                     </button>
                 </form>
                 {/* File name and text */}
@@ -162,10 +176,12 @@ const OCRResultPopup = ({ open, onClose, fileName, text }) => {
                     border: "1px solid #eee",
                     borderRadius: "4px",
                     background: "#fafbfc",
-                    marginTop: 8
+                    marginTop: 8,
+                    maxHeight: "14em", // ~8 lines at 1rem + padding
+                    overflowY: "auto"
                 }}>
                     {result
-                        ? highlightSubstring(text, result)
+                        ? highlightSubstring(text, result, highlightRef)
                         : text}
                 </div>
             </div>
