@@ -109,10 +109,12 @@ function App() {
         alignContent: "center", justifyItems: "center", backgroundColor: "#F2FAFF", padding: "20px", minHeight: '74.6vh'
       }}>
         <div style={{
-          width: isLoaded ? "1200px" : "800px",
+
+          maxWidth: isLoaded ? "1200px" : "800px",
+          width: "100%",
           minHeight: "35vh",
           maxHeight: "auto",
-          padding: "30px",
+          padding: "5vw",
           background: "#fff",
           borderRadius: "10px",
           boxShadow: "0 4px 8px rgba(0,0,0,0.1)",

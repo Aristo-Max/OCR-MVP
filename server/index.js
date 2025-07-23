@@ -8,7 +8,6 @@ const { runGemini } = require('./geminiHelper');
 const { Poppler } = require('node-poppler');
 
 dotenv.config();
-
 const app = express();
 const PORT = process.env.PORT || 3001;
 app.use(express.json());
@@ -89,21 +88,24 @@ app.post('/semantic-search', async (req, res) => {
         }
 
         const prompt = `
-Given the following text, find and return the most relevant substring (exact phrase) that matches the semantic meaning of the query. 
-If nothing matches, return null.
+Given the following paragraph and a user query, find and return the most semantically similar sentence, phrase, or word from the paragraph that closely matches the meaning of the query.
+
 Query: "${query}"
 Text: """${text}"""
-Return only the matching substring or null.
+
+Return only the exact matching substring from the text (as it appears). If nothing matches, return "null". Do not explain your answer.
 `;
 
         const { text: geminiResult } = await runGemini({
             modelName: "gemini-2.0-flash-exp",
             prompt
         });
-
-        let substring = geminiResult && geminiResult.trim();
-        if (substring === "null" || !substring) substring = null;
-
+        console.log("Gemini Result:", geminiResult);
+        if (!geminiResult) {
+            return res.status(500).json({ error: "No response from Gemini API." });
+        }
+        let substring = geminiResult && geminiResult.trim().replace(/^["']|["']$/g, '');
+        if (!substring || substring.toLowerCase() === 'null') substring = null;
         res.json({ substring });
 
     } catch (err) {
