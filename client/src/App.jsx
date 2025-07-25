@@ -49,6 +49,7 @@ function App() {
       if (response.data && Array.isArray(response.data.results)) {
         setData(response.data.results);
         setIsLoaded(true);
+        setFileRequired(false);
         showNotification("OCR processing complete!", "success");
       } else {
         showNotification("Unexpected response from server.", "error");
@@ -68,6 +69,9 @@ function App() {
 
     if (validFiles.length !== acceptedFiles.length) {
       alert("Some files were rejected. Only PNG, JPG, JPEG, and PDF are allowed.");
+    }
+    if (validFiles.length > 0) {
+      setFileRequired(false);
     }
 
     setFiles((prevFiles) => [...prevFiles, ...validFiles]);
