@@ -49,8 +49,12 @@ function App() {
       if (response.data && Array.isArray(response.data.results)) {
         setData(response.data.results);
         setIsLoaded(true);
+<<<<<<< HEAD
         setFileRequired(false); // ✅ Hide the message if previously shown
         
+=======
+        setFileRequired(false);
+>>>>>>> 29cea6080a1826e09abe4d45615b8acc963093d3
         showNotification("OCR processing complete!", "success");
       } else {
         showNotification("Unexpected response from server.", "error");
@@ -68,9 +72,18 @@ function App() {
     ["image/png", "image/jpeg", "image/jpg", "application/pdf"].includes(file.type)
   );
 
+<<<<<<< HEAD
   if (validFiles.length !== acceptedFiles.length) {
     alert("Some files were rejected. Only PNG, JPG, JPEG, and PDF are allowed.");
   }
+=======
+    if (validFiles.length !== acceptedFiles.length) {
+      alert("Some files were rejected. Only PNG, JPG, JPEG, and PDF are allowed.");
+    }
+    if (validFiles.length > 0) {
+      setFileRequired(false);
+    }
+>>>>>>> 29cea6080a1826e09abe4d45615b8acc963093d3
 
   if (validFiles.length > 0) {
     setFileRequired(false); // ✅ This line clears the error once valid files are selected
@@ -117,6 +130,9 @@ function App() {
         <div style={{
 <<<<<<< HEAD
           
+=======
+
+>>>>>>> 29cea6080a1826e09abe4d45615b8acc963093d3
           maxWidth: isLoaded ? "1200px" : "800px",
           width: "100%",
           minHeight: "35vh",
