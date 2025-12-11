@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import axios from "axios";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -42,13 +42,15 @@ function App() {
     files.forEach((file) => formData.append("files", file));
 
     try {
-      const response = await axios.post("http://13.204.91.67:3001/ocr-batch", formData, {
+      const response = await axios.post("http://localhost:3001/ocr-batch", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
       if (response.data && Array.isArray(response.data.results)) {
         setData(response.data.results);
         setIsLoaded(true);
+        setFileRequired(false); // ✅ Hide the message if previously shown
+        
         showNotification("OCR processing complete!", "success");
       } else {
         showNotification("Unexpected response from server.", "error");
@@ -62,43 +64,47 @@ function App() {
   };
 
   const onDrop = (acceptedFiles) => {
-    const validFiles = acceptedFiles.filter((file) =>
-      ["image/png", "image/jpeg", "image/jpg", "application/pdf"].includes(file.type)
-    );
+  const validFiles = acceptedFiles.filter((file) =>
+    ["image/png", "image/jpeg", "image/jpg", "application/pdf"].includes(file.type)
+  );
 
-    if (validFiles.length !== acceptedFiles.length) {
-      alert("Some files were rejected. Only PNG, JPG, JPEG, and PDF are allowed.");
-    }
+  if (validFiles.length !== acceptedFiles.length) {
+    alert("Some files were rejected. Only PNG, JPG, JPEG, and PDF are allowed.");
+  }
 
-    setFiles((prevFiles) => [...prevFiles, ...validFiles]);
+  if (validFiles.length > 0) {
+    setFileRequired(false); // ✅ This line clears the error once valid files are selected
+  }
 
-    const newPreviews = validFiles.map((file) => ({
-      isLoading: true,
-      url: null,
-      type: file.type,
-      name: file.name,
-      file,
-    }));
-    setPreviews((prevPreviews) => [...prevPreviews, ...newPreviews]);
+  setFiles((prevFiles) => [...prevFiles, ...validFiles]);
 
-    validFiles.forEach((file, index) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setPreviews((prevPreviews) => {
-          const updatedPreviews = [...prevPreviews];
-          updatedPreviews[prevPreviews.length - validFiles.length + index] = {
-            isLoading: false,
-            url: reader.result,
-            type: file.type,
-            name: file.name,
-            file,
-          };
-          return updatedPreviews;
-        });
-      };
-      reader.readAsDataURL(file);
-    });
-  };
+  const newPreviews = validFiles.map((file) => ({
+    isLoading: true,
+    url: null,
+    type: file.type,
+    name: file.name,
+    file,
+  }));
+  setPreviews((prevPreviews) => [...prevPreviews, ...newPreviews]);
+
+  validFiles.forEach((file, index) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPreviews((prevPreviews) => {
+        const updatedPreviews = [...prevPreviews];
+        updatedPreviews[prevPreviews.length - validFiles.length + index] = {
+          isLoading: false,
+          url: reader.result,
+          type: file.type,
+          name: file.name,
+          file,
+        };
+        return updatedPreviews;
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+};  
 
   return (
     <div style={{ height: '100vh' }}>
@@ -109,10 +115,12 @@ function App() {
         alignContent: "center", justifyItems: "center", backgroundColor: "#F2FAFF", padding: "20px", minHeight: '74.6vh'
       }}>
         <div style={{
-          width: isLoaded ? "1200px" : "800px",
+          
+          maxWidth: isLoaded ? "1200px" : "800px",
+          width: "100%",
           minHeight: "35vh",
           maxHeight: "auto",
-          padding: "30px",
+          padding: "5vw",
           background: "#fff",
           borderRadius: "10px",
           boxShadow: "0 4px 8px rgba(0,0,0,0.1)",

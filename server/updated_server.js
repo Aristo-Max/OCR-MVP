@@ -7,7 +7,7 @@ const dotenv = require('dotenv');
 const { runGemini } = require('./geminiHelper');
 const { Poppler } = require('node-poppler');
 
-dotenv.config(); 
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -58,7 +58,7 @@ app.post('/ocr-batch', upload.array('files'), async (req, res) => {
         for (const img of allImages) {
             try {
                 const { text } = await runGemini({
-                    modelName: "gemini-2.5-flash",
+                    modelName: "gemini-2.0-flash-exp",
                     imagePath: img.path,
                     mimeType: 'image/png',
                     prompt: 'Extract both normal (printed) text and handwritten text from the image, if available. Do not include any introductory or explanatory phrases in the output.'
@@ -89,26 +89,21 @@ app.post('/semantic-search', async (req, res) => {
         }
 
         const prompt = `
-Given the following paragraph and a user query, find and return the most semantically similar sentence, phrase, or word from the paragraph that closely matches the meaning of the query.
-
-Query: "${query}"~
+Given the following text, find and return the most relevant substring (exact phrase) that matches the semantic meaning of the query. 
+If nothing matches, return null.
+Query: "${query}"
 Text: """${text}"""
-
-Return only the exact matching substring from the text (as it appears). If nothing matches, return "null". Do not explain your answer.
+Return only the matching substring or null.
 `;
 
         const { text: geminiResult } = await runGemini({
             modelName: "gemini-2.0-flash-exp",
             prompt
         });
-        
-        console.log("Gemini Result:", geminiResult);
-        if (!geminiResult) {
-            return res.status(500).json({ error: "No response from Gemini API." });
-        }
-        let substring = geminiResult && geminiResult.trim().replace(/^["']|["']$/g, '');
-        if (!substring || substring.toLowerCase() === 'null') substring = null;
-        
+
+        let substring = geminiResult && geminiResult.trim();
+        if (substring === "null" || !substring) substring = null;
+
         res.json({ substring });
 
     } catch (err) {
@@ -121,4 +116,33 @@ app.get('/', (req, res) => res.send('Hello from AristoMax OCR server!'));
 
 app.listen(PORT, () => {
     console.log(`Server is running at http://localhost:${PORT}`);
+});
+
+
+const { spawn } = require('child_process');
+
+// Highlight PDF Endpoint
+app.post('/highlight-pdf', upload.single('pdf'), (req, res) => {
+    const query = req.body.query;
+    const pdfPath = req.file.path;
+
+    const python = spawn('python3', ['highlight_pdf.py', pdfPath, query]);
+
+    let result = "";
+    python.stdout.on('data', data => result += data.toString());
+    python.stderr.on('data', err => console.error("Highlight Error:", err.toString()));
+
+    python.on('close', () => {
+        try {
+            const output = JSON.parse(result);
+            if (output.highlighted_pdf) {
+                res.download(output.highlighted_pdf);
+            } else {
+                res.status(200).json({ message: "No match found", phrase: output.matched_phrase });
+            }
+        } catch (e) {
+            console.error("Failed to parse highlight script output", e);
+            res.status(500).json({ error: "PDF highlight failed" });
+        }
+    });
 });
