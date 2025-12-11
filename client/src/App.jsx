@@ -115,6 +115,7 @@ function App() {
         alignContent: "center", justifyItems: "center", backgroundColor: "#F2FAFF", padding: "20px", minHeight: '74.6vh'
       }}>
         <div style={{
+<<<<<<< HEAD
           
           maxWidth: isLoaded ? "1200px" : "800px",
           width: "100%",

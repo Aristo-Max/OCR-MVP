@@ -14,7 +14,7 @@ client/package-lock.json
 server/package-lock.json
 
 OCR.txt
-
+OCR.pem
 
 # Logs
 *.log
